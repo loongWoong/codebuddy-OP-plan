@@ -1,0 +1,282 @@
+#1 后端分析
+分析项目的后端代码编写规范，写入md文件供后续AI生成作为参考
+包含类、接口调用、数据库调用等内容
+
+#2 数据库分析
+@/datart-master\server\src\main\java\datart\server\job\WeChartJob.java 根据项目的SQL建表语法和表生成代码，编写数据库操作规范
+
+#3 前端分析
+分析项目的前端代码编写规范，写入md文件供后续AI生成作为参考
+包含前端语法、前端API与后端交互写法、前端异常处理等
+
+#4 代码生成
+
+
+要在开源项目 **Datart** 上添加“指标管理”功能，并与其原有功能（如自定义图表、维度/指标配置、数据大屏等）深度融合，建议按以下步骤操作：
+---
+### ✅ 一、明确 Datart 当前指标能力边界
+Datart 本身不预定义“指标”实体，而是通过图表配置项对字段进行“维度/指标”的语义处理：
+- **维度**：用于分组
+- **指标**：用于聚合（支持总计、平均、计数、最大/最小等）
+- **支持自定义计算字段**：可用 SQL 表达式定义新指标
+
+---
+
+### ✅ 二、设计“指标管理”功能模块（参考行业标准）
+建议引入一个轻量但完整的指标管理平台，具备以下核心能力：
+
+| 功能模块         | 说明                                                                 |
+|------------------|----------------------------------------------------------------------|
+| 指标定义         | 支持原子指标、衍生指标、复合指标的定义与表达式配置                   |
+| 指标元数据       | 包括业务口径、技术口径、责任人、更新频率、数据源、SQL 模板等         |
+| 生命周期管理     | 支持指标的创建、发布、下线、版本管理                                 |
+| 可视化绑定       | 指标可与 Datart 图表、仪表板、数据大屏绑定                           |
+| 权限与使用追踪   | 支持指标使用频率统计、权限控制、责任人通知                            |
+
+---
+
+### ✅ 三、技术实现路径（与 Datart 集成）
+
+#### 1. **数据库扩展**
+- 在 Datart 使用的数据库中新增 `metric_management` 表：
+  ```sql
+  CREATE TABLE metric_management (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(128),
+    expression TEXT,
+    description TEXT,
+    owner VARCHAR(64),
+    status VARCHAR(20),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+  );
+  ```
+
+#### 2. **前端集成**
+- 在 Datart 前端（React）新增“指标管理”菜单页：
+  - 路径建议：`/metrics`
+  - 使用 Ant Design Pro 组件快速构建 CRUD 页面
+  - 支持指标表达式编辑器（可复用 SQL 编辑器）
+
+#### 3. **与图表配置打通**
+- **扩展图表配置项**：在图表配置面板中增加“引用指标”下拉框
+  - 读取 `metric_management` 表中已发布指标
+  - 将指标表达式注入到图表的 SQL 或字段配置中
+- **动态渲染**：指标变更后，图表自动更新（通过监听指标 ID 变更触发数据重拉）
+
+#### 4. **权限与元数据打通**
+- 复用 Datart 的权限系统（基于角色/用户）
+- 将指标作为“资源”注册到 Datart 的权限中心
+- 支持指标责任人通知（可复用 Datart 的消息中心）
+
+---
+
+### ✅ 四、参考现有实现（可借鉴）
+- **AllData 数据中台** 已将 Datart 集成为其 BI 可视化模块，并扩展了指标体系平台（基于 SuperSonic）
+- **华为云 DataArts Insight** 提供了完整的指标创建、编辑、删除、血缘追踪等功能，可作为产品原型参考
+
+---
+
+### ✅ 五、最小可行版本（MVP）建议
+| 优先级 | 功能点                   | 说明                             |
+|--------|--------------------------|----------------------------------|
+| P0     | 指标定义与存储           | 支持手动创建指标，存表           |
+| P0     | 图表绑定指标             | 图表配置页可下拉选择指标         |
+| P1     | 指标表达式校验           | 支持 SQL 语法校验与预览          |
+| P1     | 指标权限管理             | 与 Datart 权限系统打通           |
+| P2     | 指标血缘与影响分析       | 记录指标被哪些图表使用           |
+
+---
+
+### ✅ 六、后续扩展方向
+- 支持指标自动调度（如每日刷新）
+- 指标异常监控（波动告警）
+- 指标市场：业务人员可自助申请使用指标
+
+---
+以最小可行版本（MVP）建议 修改项目，完成前后端改造验证方案的可行性。
+注意编码规范，Java编码不要使用不存在的方法，遵守datart项目现有编码规范。
+后端编码规范 datart-backend-coding-standards.md
+前端编码规范 datart-frontend-coding-standards.md
+
+#5 前端编译报错，检查修改
+前端编码规范 datart-frontend-coding-standards.md
+根据前端规范检查修改生成的前端代码
+
+## 5.1 单文件修改
+@/datart-master\frontend\src\app\components\MetricSelector\index.tsx 1、不能将类型“"PUBLISHED"”分配给类型“MetricStatus | undefined”。ts(2322)
+2、类型“PageResponse<MetricDefinition>”的参数不能赋给类型“SetStateAction<MetricDefinition[]>”的参数。ts(2345)
+3、不能将类型“{ children: DataType; size: string; color: string; }”分配给类型“IntrinsicAttributes & TagProps & RefAttributes<HTMLElement>”。
+类型“IntrinsicAttributes & TagProps & RefAttributes<HTMLElement>”上不存在属性“size”。ts(2322)
+
+根据项目的前端规范修改
+
+##5.2 多文件修改
+TypeScript error in G:/data/git-obj/datart2/datart-master/frontend/src/app/pages/MetricManagementPage
+检查修改多个文件的类型处理问题
+
+##5.3 多文件修改
+@/datart-master\frontend\src\app\pages\MetricManagementPage\index.tsx G:/data/git-obj/datart2/datart-master/frontend/src/app/pages/MetricManagementPage/index.tsx
+修改报错
+找不到模块“./MetricDefinitionForm”或其相应的类型声明。ts(2307)
+找不到模块“./MetricDefinitionDetail”或其相应的类型声明。ts(2307)
+不能将类型“{ selectedRowKeys: string[]; onChange: React.Dispatch<React.SetStateAction<string[]>>; getCheckboxProps: (record: MetricDefinition) => { disabled: boolean; }; }”分配给类型“TableRowSelection<MetricDefinition>”。
+属性“onChange”的类型不兼容。
+不能将类型“Dispatch<SetStateAction<string[]>>”分配给类型“(selectedRowKeys: Key[], selectedRows: MetricDefinition[]) => void”。
+参数“value”和“selectedRowKeys” 的类型不兼容。
+不能将类型“Key[]”分配给类型“SetStateAction<string[]>”。
+不能将类型“Key[]”分配给类型“string[]”。
+不能将类型“Key”分配给类型“string”。
+不能将类型“number”分配给类型“string”。ts(2322)
+
+修改问题
+
+#6 后端修改
+根据后端编码规范 datart-backend-coding-standards.md检查修改生成的代码，解决类型错误、无法运行的问题。
+### 手动修复extends CRUDMapper
+手动修改类型错误  MetricDefinition result = metricDefinitionService.retrieve(id);
+## 6.1 多文件修改
+根据后端编码规范 datart-backend-coding-standards.md修改下面的报错问题
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\controller\MetricDefinitionController.java:78:70
+java: 不兼容的类型: datart.core.entity.MetricDefinition无法转换为datart.server.base.dto.MetricDefinitionDto
+
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\MetricDefinitionService.java:30:84
+java: 类型参数datart.server.base.dto.MetricDefinitionDto不在类型变量M的范围内
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\MetricDefinitionService.java:104:25
+java: datart.server.service.MetricDefinitionService中的archive(java.lang.String)与datart.server.service.BaseCRUDService中的archive(java.lang.String)冲突
+  返回类型datart.server.base.dto.MetricDefinitionDto与boolean不兼容
+
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:50:8
+java: datart.server.service.impl.MetricDefinitionServiceImpl不是抽象的, 并且未覆盖datart.server.service.BaseCRUDService中的抽象方法requirePermission(datart.core.entity.MetricDefinition,int)
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:245:32
+java: datart.server.service.impl.MetricDefinitionServiceImpl中的archive(java.lang.String)无法实现datart.server.service.BaseCRUDService中的archive(java.lang.String)
+  返回类型datart.server.base.dto.MetricDefinitionDto与boolean不兼容
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:137:32
+java: datart.server.service.impl.MetricDefinitionServiceImpl中的retrieve(java.lang.String)无法实现datart.server.service.BaseCRUDService中的retrieve(java.lang.String)
+  返回类型datart.server.base.dto.MetricDefinitionDto与datart.core.entity.MetricDefinition不兼容
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:72:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:75:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:78:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:81:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:85:24
+java: 找不到符号
+  符号:   方法 getCurrentOrgId()
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:87:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:93:32
+java: 找不到符号
+  符号:   方法 newId()
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:103:43
+java: 不兼容的类型: java.lang.Class<java.lang.RuntimeException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:115:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:119:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:123:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:136:5
+java: 方法不会覆盖或实现超类型的方法
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:140:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:143:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:156:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:161:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:172:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:182:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:210:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:223:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:226:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:230:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:248:51
+java: 不兼容的类型: java.lang.Class<java.lang.IllegalArgumentException>无法转换为java.lang.Class<? extends datart.core.base.exception.BaseException>
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:251:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:299:9
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+G:\data\git-obj\datart2\datart-master\server\src\main\java\datart\server\service\impl\MetricDefinitionServiceImpl.java:361:13
+java: 找不到符号
+  符号:   方法 requireOrgOwner(java.lang.String)
+  位置: 类 datart.server.service.impl.MetricDefinitionServiceImpl
+## 6.2 特殊修改
+   @/datart-master/server/src/main/java/datart/server/service/impl/MetricDefinitionServiceImpl.java 
+        String orgId = getCurrentUser().getOrgId();
+方法使用错误，orgId是前端传参，后端没有获取方法。检查项目通用写法进行修改
+
+#7 运行后前端不显示指标管理界面，后端数据库也没有相关表
+##7.1 @/datart-frontend-coding-standards.md @/datart-frontend-coding-standards.md 结束任务，运行新任务
+基于G:\data\git-obj\datart2\datart-master\docs中问题修改的记录，总结编码规范更新到前端编码规范中 @/datart-frontend-coding-standards.md
+
+##7.2@/datart-frontend-coding-standards.md#L1247-1247 继续更新后的前端规范，检查新生成的前端代码并修改代码存在的问题
+
+##7.3
+TypeScript error in G:/data/git-obj/datart2/datart-master/frontend/src/app/pages/MetricManagementPage/index.tsx(48,3):
+Module '"app/types/MetricDefinition"' has no exported member 'METRIC_STATUS_OPTIONS'. TS2305
+
+46 | MetricStatus,
+47 | DataType,
+> 48 | METRIC_STATUS_OPTIONS,
+| ^
+49 | DATA_TYPE_OPTIONS,
+50 | } from 'app/types/MetricDefinition';
+51 | import { metricDefinitionService } from 'app/services/metricDefinitionService';
+``` 根据前端编码规范修改
+
+##7.4
+TypeScript error in G:/data/git-obj/datart2/datart-master/frontend/src/app/pages/MetricManagementPage/MetricDefinitionDetail.tsx(30,28):
+Module '"app/types/MetricDefinition"' has no exported member 'RESOURCE_TYPE_OPTIONS'. TS2305
+
+28 | Typography,
+29 | } from 'antd';
+> 30 | import { MetricDefinition, RESOURCE_TYPE_OPTIONS } from 'app/types/MetricDefinition';
+| ^
+31 | import usePrefixI18N from 'app/hooks/useI18NPrefix';
+32 | import styled from 'styled-components/macro';
+33 |
+根据前端规范继续修改
+
+
+##7.5
+TypeScript error in G:/data/git-obj/datart2/datart-master/frontend/src/app/pages/MetricManagementPage/MetricDefinitionDetail.tsx(30,28):
+Module '"app/types/MetricDefinition"' has no exported member 'RESOURCE_TYPE_OPTIONS'. TS2305
+
+28 | Typography,
+29 | } from 'antd';
+> 30 | import { MetricDefinition, RESOURCE_TYPE_OPTIONS } from 'app/types/MetricDefinition';
+| ^
+31 | import usePrefixI18N from 'app/hooks/useI18NPrefix';
+32 | import styled from 'styled-components/macro';
+33 |
+根据前端规范继续修改
