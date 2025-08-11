@@ -1,0 +1,125 @@
+在 datart 开源项目基础上二次开发「指标管理系统」时，即使拥有大模型代码生成工具，仍存在一系列“非代码”与“代码交织”的硬骨头。以下按「需求→架构→数据→代码→流程→治理」六个维度拆解难点，并给出可落地的应对策略。
+
+------------------------------------------------
+1. 需求层：指标语义与业务上下文缺失  
+• 难点  
+  – datart 原生以“图表-数据集”为核心，指标散落在 SQL 片段、计算字段、前端表达式里，没有统一语义层。  
+  – 指标口径、维度、修饰词、时间粒度、业务线、权限矩阵均需重新定义，而大模型对业务黑话（如“有效 GMV”）一无所知。  
+• 策略  
+  – 用「指标字典」Prompt 模板喂给大模型：  
+    ```
+    指标名：有效GMV  
+    口径SQL：select sum(order_amt) from dwd_order where status='PAID' and is_refund=0  
+    维度：[dt,channel,region]  
+    时间粒度：1d  
+    权限：仅电商部可看  
+    ```  
+  – 让大模型基于字典反向生成 datart 数据集、计算字段、权限 SQL，避免人工转述失真。
+
+------------------------------------------------
+2. 架构层：如何嵌入而不破坏现有扩展点  
+• 难点  
+  – datart 后端扩展点分散：  
+    • 数据源管理 → datart.server.service.SourceService  
+    • 数据集管理 → datart.server.service.DataProviderService  
+    • 权限 → datart.security.base.Permission  
+  – 指标管理需要新增「指标域」微服务还是复用现有 Service？  
+  – 前端路由、菜单、权限守卫全部需要动态注入。  
+• 策略  
+  – 走“插件式”而非“侵入式”：  
+    1. 新增 module：datart-indicator（独立 JAR），SPI 注册到 Spring。  
+    2. 前端用 Module Federation 远程加载 indicator-app，路由挂到 /admin/indicator。  
+  – 用架构图 Prompt 让大模型生成骨架：  
+    ```
+    请生成一个 Spring Boot Module，包名 io.datart.indicator，包含：
+    - entity/Indicator, Dimension, Metric
+    - repository/IndicatorRepository
+    - service/IndicatorService
+    - controller/IndicatorController
+    - security/IndicatorPermission
+    所有类必须符合 datart Checkstyle 规则。
+    ```
+
+------------------------------------------------
+3. 数据层：指标血缘与版本回滚  
+• 难点  
+  – datart 数据集与图表之间无血缘存储，修改指标后无法自动感知影响面。  
+  – 指标 SQL 需要版本化（git 不友好，因为嵌在 JSON 里）。  
+• 策略  
+  – 在 indicator 表增加 `lineage_json`（上游表→字段→表达式），写触发器同步到 datart.dataset 的 `config` 字段。  
+  – 用 Liquibase 做版本迁移，大模型生成 changelog：  
+    ```
+    <changeSet id="indicator-v1" author="ai">
+      <createTable tableName="indicator">
+        ...
+      </createTable>
+    </changeSet>
+    ```
+
+------------------------------------------------
+4. 代码层：风格一致与冲突合并  
+• 难点  
+  – datart 前端用 Ant Design + umi，后端 Checkstyle + Spotless，大模型易“跑偏”。  
+  – 多人并行生成代码，Git 冲突集中在 `router.config.ts`、`menu.ts`、`application.yml`。  
+• 策略  
+  – 在 CI 里加「风格门禁」：  
+    ```
+    npx prettier --check src/ || exit 1  
+    mvn spotless:check || exit 1
+    ```  
+  – 用 pre-commit Hook + husky 自动格式化，大模型生成的代码直接 `git apply` 即可。
+
+------------------------------------------------
+5. 流程层：指标发布与灰度  
+• 难点  
+  – 新指标上线需走审批、灰度、回滚，但 datart 无发布管线。  
+  – 指标变更影响下游 BI 看板，需要「影响面分析」。  
+• 策略  
+  – 在 indicator-service 增加「发布单」概念：  
+    ```
+    POST /api/v1/indicator/release  
+    { indicatorId: 123, env: 'staging', approval: true }
+    ```  
+  – 大模型根据血缘 JSON 自动生成待通知的图表 ID 列表，推送到钉钉/飞书。
+
+------------------------------------------------
+6. 治理层：权限、性能、可观测  
+• 难点  
+  – 指标权限需继承 datart 的行级/列级 RLS，但粒度更细（指标级）。  
+  – 指标 SQL 可能触发全表扫描，缺少限流与熔断。  
+• 策略  
+  – 权限：复用 datart 的 `PermissionEvaluator`，增加 `@IndicatorPermission` 注解。  
+  – 性能：  
+    • 在 indicator SQL 外层自动包一层 `WITH LIMIT`；  
+    • 大模型生成基于 Calcite 的 SQL 重写规则，把 `sum(case when ...)` 改写成 bitmap 预聚合。  
+  – 可观测：  
+    • 暴露 `/actuator/indicator/metrics` 端点，大模型生成 Micrometer 埋点代码。
+
+------------------------------------------------
+一键自检脚本（供 CI 使用）
+
+```bash
+#!/usr/bin/env bash
+set -e
+
+echo "=== 指标管理系统自检 ==="
+echo "1. 检查表结构版本"
+mvn liquibase:validate -Dliquibase.contexts=indicator
+
+echo "2. 检查 Checkstyle/Spotless"
+mvn spotless:check
+
+echo "3. 检查前端风格"
+npm run lint:prettier
+
+echo "4. 检查指标血缘完整性"
+java -jar datart-indicator-test.jar --suite=lineage
+
+echo "5. 检查权限矩阵"
+java -jar datart-indicator-test.jar --suite=permission
+
+echo "PASS"
+```
+
+结论  
+难点集中在“业务语义 → 架构扩展 → 数据治理 → 风格一致”四连击。把指标字典、架构图、Checkstyle、血缘 JSON 作为 Prompt 上下文喂给大模型，可让 70% 的机械工作自动化；剩余 30% 仍需人工拍板（口径、权限、性能）。

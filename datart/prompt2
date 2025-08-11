@@ -1,0 +1,57 @@
+目标：datart开源项目 借助大模型代码生成工具二次开发添加指标管理系统
+md文档是指标管理系统的需求 @/指标管理需求.md 
+初步分析的开发计划是 @/开发计划.md 
+任务：
+请综合分析后自主完成相关功能的计划和开发
+注意：
+前端开发遵守datart规范  @/datart-frontend-coding-standards.md 
+后端开发遵守datart规范 @/datart-backend-coding-standards.md 
+
+一路继续
+
+# 人工介入
+补全缺失的DimensionDefinitionMappe、DimensionTableMapper、DataModelCreateParam
+
+
+
+@/datart-master/server/src/main/java/datart/server/controller/MetricDefinitionController.java
+datart项目的orgId 是前端与后端传递的一个参数，不能后端通过方法获取，根据MetricDefinitionController的成功使用案例，
+修改其它生成文件相关代码。
+生成文件代码可查询未提交git文件列表
+
+
+DataModelUpdateParam 类不存在
+
+参考MetricDefinitionServiceImpl里面  String orgId = createParam.getOrgId();的orgId获取方法，修改全部修改其它生成接口实现文件相关代码。
+生成文件代码可查询未提交git文件列表
+
+
+
+factTableMapper.insertSelective(factTable);
+方法不存在，补全方法
+
+
+解决DimensionTableServiceImpl中
+DimensionTableMapper和MetricModelMapper不存在的方法，同样处理DimensionDefinitionServiceImpl和DataModelServiceIm
+
+DimensionTable 不包含DimensionTableServiceImpl所需的参数
+
+DimensionDefinition不包含DimensionDefinitionServiceImpll所需的参数
+
+
+DataModelService方法参数缺失，需要按照DataModelServiceImpl方法参数补全；
+DataModelCreateParam和DataModelUpdateParam不包含DataModelServiceImpl所需的参数
+
+在datart.core.entity创建ImportExportQueryParam解决
+ImportExportTaskSqlProvider和ImportExportTaskMapper 使用依赖问题
+
+EtlTaskExecutionSqlProvider、RolePermissionSqlProvider、MetricPermissionSqlProvider文件不存在
+
+EtlTaskExecution不包含EtlTaskExecutionSqlProvider所需的参数
+
+DimensionTable不包含
+DimensionTableSqlProvider所需的参数
+DimensionDefinition不包含
+DimensionDefinitionSqlProvider所需的参数
+MetricModel不包含
+MetricModelSqlProvider所需的参数
